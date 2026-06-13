@@ -21,6 +21,9 @@
 *.tsbuildinfo
 next-env.d.ts
 
+# apuestas: los Excel con datos personales no se suben (sí el participantes.ts generado)
+apuestas/*.xlsx
+
 # sistema
 .DS_Store
 *.pem
