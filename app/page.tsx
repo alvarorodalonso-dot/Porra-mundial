@@ -6,6 +6,9 @@ import { PARTICIPANTES } from "@/lib/participantes";
 import { generarRanking } from "@/lib/scoring";
 import Ranking from "@/components/Ranking";
 import AuditPanel from "@/components/AuditPanel";
+import Partidos from "@/components/Partidos";
+
+type Vista = "ranking" | "partidos";
 
 const INTERVALO_REFRESCO = 60_000; // 60 s
 
@@ -14,6 +17,7 @@ export default function Home() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [seleccion, setSeleccion] = useState<string | null>(null);
+  const [vista, setVista] = useState<Vista>("ranking");
 
   const cargar = useCallback(async () => {
     try {
@@ -88,7 +92,9 @@ export default function Home() {
               }`}
             >
               <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse-live" />
-              {datos.fuente === "api" ? "Datos reales (API)" : "Modo demo"}
+              {datos.fuente === "api"
+                ? `Resultados reales · ${datos.proveedor ?? "API"}`
+                : `Modo ${datos.proveedor ?? "demo"}`}
             </span>
           )}
           <span className="text-pizarra-500">
@@ -128,15 +134,43 @@ export default function Home() {
 
       {!cargando && datos && (
         <>
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-pizarra-500">
-              Ranking general
-            </h2>
-            <span className="text-xs text-pizarra-600">
-              {ranking.length} participantes · toca para auditar
-            </span>
+          {/* Pestañas */}
+          <div className="mb-5 inline-flex rounded-xl border border-pizarra-700 bg-pizarra-850/60 p-1">
+            {(
+              [
+                ["ranking", "🏆 Ranking"],
+                ["partidos", "📋 Partidos"],
+              ] as [Vista, string][]
+            ).map(([v, etiqueta]) => (
+              <button
+                key={v}
+                onClick={() => setVista(v)}
+                className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+                  vista === v
+                    ? "bg-esmeralda-600/20 text-esmeralda-400"
+                    : "text-pizarra-500 hover:text-emerald-50"
+                }`}
+              >
+                {etiqueta}
+              </button>
+            ))}
           </div>
-          <Ranking ranking={ranking} onSeleccionar={setSeleccion} />
+
+          {vista === "ranking" ? (
+            <>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-pizarra-500">
+                  Ranking general
+                </h2>
+                <span className="text-xs text-pizarra-600">
+                  {ranking.length} participantes · toca para auditar
+                </span>
+              </div>
+              <Ranking ranking={ranking} onSeleccionar={setSeleccion} />
+            </>
+          ) : (
+            <Partidos datos={datos} ranking={ranking} />
+          )}
         </>
       )}
 

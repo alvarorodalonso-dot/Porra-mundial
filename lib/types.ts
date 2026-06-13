@@ -20,6 +20,8 @@ export interface Partido {
   /** Índice 0-35 dentro de los 36 primeros partidos de grupos (null si no aplica). */
   indiceQuiniela: number | null;
   ronda: Ronda;
+  /** Grupo de la fase de grupos (A-L), si aplica. */
+  grupo?: string;
   local: string;
   visitante: string;
   golesLocal: number | null;
@@ -41,6 +43,8 @@ export interface DatosTorneo {
   campeon: string | null;
   /** Fuente de datos efectiva: "api" (datos reales) o "demo" (mock local). */
   fuente: "api" | "demo";
+  /** Nombre legible del proveedor activo (API-Football, TheSportsDB, Demo). */
+  proveedor?: string;
   /** Marca de tiempo de la respuesta. */
   actualizado: string;
 }

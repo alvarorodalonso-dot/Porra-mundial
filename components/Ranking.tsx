@@ -73,13 +73,17 @@ export default function Ranking({ ranking, onSeleccionar }: Props) {
                   <span className="tabular text-2xl font-bold text-esmeralda-400">
                     {p.total}
                   </span>
-                  {distancia > 0 ? (
-                    <span className="tabular text-[11px] text-pizarra-500">
-                      −{distancia}
-                    </span>
-                  ) : (
+                  {i === 0 ? (
                     <span className="text-[11px] font-medium text-ambar">
                       Líder
+                    </span>
+                  ) : distancia === 0 ? (
+                    <span className="text-[11px] font-medium text-pizarra-500">
+                      Empate
+                    </span>
+                  ) : (
+                    <span className="tabular text-[11px] text-pizarra-500">
+                      −{distancia}
                     </span>
                   )}
                 </div>

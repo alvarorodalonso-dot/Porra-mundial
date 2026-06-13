@@ -1,87 +1,54 @@
-import type { DatosTorneo, Partido, ProgresoEquipos, Signo, Ronda } from "./types";
+import type { DatosTorneo, Partido, Signo } from "./types";
+import { QUINIELA_OFICIAL } from "./quiniela";
 
 // ───────────────────────────────────────────────────────────────────────────
-// DATOS DEMO
-// Torneo parcialmente jugado, para que el Auditor sea funcional y visual
-// incluso sin clave de API. Se reemplaza automáticamente por datos reales
-// cuando la variable de entorno API_FOOTBALL_KEY está configurada.
+// DATOS DEMO (respaldo offline)
+// Reflejan el estado REAL de inicio del torneo: solo los primeros partidos
+// jugados, sin eliminatorias todavía. Solo se usa si no hay conexión a la
+// fuente online (TheSportsDB / API-Football), para que la app nunca se rompa.
 // ───────────────────────────────────────────────────────────────────────────
 
-// 36 enfrentamientos plausibles de fase de grupos (local, visitante).
-const PARTIDOS_GRUPOS: [string, string][] = [
-  ["México", "Canadá"], ["Estados Unidos", "Gales"], ["Argentina", "Arabia Saudí"],
-  ["Francia", "Australia"], ["España", "Costa Rica"], ["Inglaterra", "Irán"],
-  ["Portugal", "Ghana"], ["Brasil", "Serbia"], ["Países Bajos", "Senegal"],
-  ["Alemania", "Japón"], ["Bélgica", "Canadá"], ["Croacia", "Marruecos"],
-  ["Uruguay", "Corea del Sur"], ["Argentina", "México"], ["Francia", "Dinamarca"],
-  ["España", "Alemania"], ["Inglaterra", "Estados Unidos"], ["Portugal", "Uruguay"],
-  ["Brasil", "Suiza"], ["Países Bajos", "Ecuador"], ["Marruecos", "Bélgica"],
-  ["Croacia", "Canadá"], ["Colombia", "Catar"], ["Senegal", "Catar"],
-  ["Argentina", "Polonia"], ["Francia", "Túnez"], ["España", "Japón"],
-  ["Inglaterra", "Gales"], ["Portugal", "Corea del Sur"], ["Brasil", "Camerún"],
-  ["Países Bajos", "Catar"], ["Alemania", "Costa Rica"], ["Bélgica", "Croacia"],
-  ["Uruguay", "Ghana"], ["Colombia", "Senegal"], ["Marruecos", "Canadá"],
-];
-
-// Resultado real (signo) de cada uno de los 36 partidos en la demo.
-const DEMO_SIGNOS: Signo[] = [
-  "1", "X", "1", "1", "1", "1", "1", "1", "X", "1", "1", "X",
-  "X", "1", "1", "X", "1", "1", "1", "1", "2", "1", "1", "X",
-  "1", "1", "1", "1", "1", "1", "1", "1", "X", "1", "2", "1",
-];
-
-// Goles coherentes con cada signo (solo para mostrar el marcador en la auditoría).
-function golesDeSigno(signo: Signo): [number, number] {
-  if (signo === "1") return [2, 0];
-  if (signo === "2") return [0, 1];
-  return [1, 1];
-}
-
-// Progreso de eliminatorias en la demo (hasta dónde llegó cada selección).
-const DEMO_PROGRESO: ProgresoEquipos = {
-  Francia: "semifinales",
-  España: "final",
-  Argentina: "cuartos",
-  Inglaterra: "semifinales",
-  Brasil: "octavos",
-  Portugal: "cuartos",
-  Alemania: "dieciseisavos",
-  "Países Bajos": "octavos",
-  Croacia: "octavos",
-  Bélgica: "dieciseisavos",
-  Uruguay: "cuartos",
-  Colombia: "dieciseisavos",
-  Marruecos: "octavos",
-  Senegal: "dieciseisavos",
-  Ecuador: "dieciseisavos",
-  Japón: "octavos",
-  Ghana: "dieciseisavos",
+// Marcadores reales de los partidos de la quiniela ya disputados (resto: sin jugar).
+// Clave = nº de partido oficial (1-36).
+const RESULTADOS_REALES: Record<number, [number, number]> = {
+  1: [2, 1], // Corea del Sur 2-1 República Checa  -> "1"
+  2: [1, 1], // Canadá 1-1 Bosnia y Herzegovina    -> "X"
+  3: [4, 1], // Estados Unidos 4-1 Paraguay        -> "1"
 };
 
-/** Construye el dataset demo completo. Torneo en curso (sin campeón aún). */
+function signoDeGoles(gl: number, gv: number): Signo {
+  if (gl > gv) return "1";
+  if (gl < gv) return "2";
+  return "X";
+}
+
+/** Construye el dataset demo: pocos partidos jugados, sin eliminatorias. */
 export function datosDemo(): DatosTorneo {
-  const partidos: Partido[] = PARTIDOS_GRUPOS.map(([local, visitante], i) => {
-    const signo = DEMO_SIGNOS[i];
-    const [gl, gv] = golesDeSigno(signo);
+  const partidos: Partido[] = QUINIELA_OFICIAL.map((p, i) => {
+    const real = RESULTADOS_REALES[p.num];
+    const jugado = real !== undefined;
+    const [gl, gv] = real ?? [null, null];
     return {
-      id: `demo-grupo-${i}`,
+      id: `demo-grupo-${p.num}`,
       indiceQuiniela: i,
-      ronda: "fase_grupos" as Ronda,
-      local,
-      visitante,
-      golesLocal: gl,
-      golesVisitante: gv,
-      estado: "finalizado",
-      fecha: `2026-06-${String(11 + Math.floor(i / 6)).padStart(2, "0")}T18:00:00Z`,
-      signo,
+      ronda: "fase_grupos",
+      grupo: p.grupo,
+      local: p.local,
+      visitante: p.visitante,
+      golesLocal: jugado ? gl : null,
+      golesVisitante: jugado ? gv : null,
+      estado: jugado ? "finalizado" : "programado",
+      fecha: `${p.fecha}T18:00:00Z`,
+      signo: jugado ? signoDeGoles(gl as number, gv as number) : null,
     };
   });
 
   return {
     partidos,
-    progreso: DEMO_PROGRESO,
-    campeon: null, // torneo en curso
+    progreso: {}, // sin eliminatorias todavía
+    campeon: null,
     fuente: "demo",
-    actualizado: "2026-06-13T12:00:00Z",
+    proveedor: "Demo (offline)",
+    actualizado: "2026-06-13T18:00:00Z",
   };
 }

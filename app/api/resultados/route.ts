@@ -1,45 +1,47 @@
 import { NextResponse } from "next/server";
-import type { DatosTorneo, Partido, ProgresoEquipos, Signo, Ronda, EstadoPartido } from "@/lib/types";
+import type {
+  DatosTorneo,
+  Partido,
+  ProgresoEquipos,
+  Signo,
+  Ronda,
+  EstadoPartido,
+} from "@/lib/types";
 import { normalizarEquipo } from "@/lib/equipos";
 import { datosDemo } from "@/lib/demo";
 import { ORDEN_RONDA } from "@/lib/scoring";
+import { indiceDePartido } from "@/lib/quiniela";
 
 // ───────────────────────────────────────────────────────────────────────────
 // PROXY BACKEND — resuelve el bloqueo CORS del navegador.
 // El frontend SIEMPRE llama a esta ruta interna; nunca a la API externa.
-// Si no hay clave configurada o la API falla, se sirven datos demo.
+//
+// Fuentes de resultados, por orden de preferencia:
+//   1. API-Football  (si existe la variable API_FOOTBALL_KEY — datos más ricos)
+//   2. TheSportsDB   (gratis, SIN clave ni registro — opción por defecto)
+//   3. Datos demo    (si todo lo anterior falla — la app nunca se rompe)
 // ───────────────────────────────────────────────────────────────────────────
 
-// Revalidación: respuesta cacheada hasta 60 s para no agotar la cuota gratuita.
-export const revalidate = 60;
+export const revalidate = 60; // cachea la respuesta 60 s
 
-const API_HOST = "https://v3.football.api-sports.io";
-// Liga 1 = Mundial (FIFA World Cup) en API-Football. Temporada 2026.
-const LIGA_MUNDIAL = 1;
-const TEMPORADA = 2026;
+function profundidad(r: Ronda): number {
+  return ORDEN_RONDA.indexOf(r);
+}
 
-/** Traduce el texto de ronda de la API a nuestra enumeración interna. */
+/** Traduce un texto de ronda (en/es) a nuestra enumeración interna. */
 function rondaDesdeTexto(texto: string): Ronda {
-  const t = texto.toLowerCase();
-  if (t.includes("group")) return "fase_grupos";
-  if (t.includes("round of 32") || t.includes("dieciseis")) return "dieciseisavos";
-  if (t.includes("round of 16") || t.includes("octav")) return "octavos";
-  if (t.includes("quarter") || t.includes("cuart")) return "cuartos";
+  const t = (texto || "").toLowerCase();
+  if (t.includes("round of 32") || t.includes("dieciseis") || t.includes("1/16"))
+    return "dieciseisavos";
+  if (t.includes("round of 16") || t.includes("octav") || t.includes("1/8"))
+    return "octavos";
+  if (t.includes("quarter") || t.includes("cuart") || t.includes("1/4"))
+    return "cuartos";
   if (t.includes("semi")) return "semifinales";
   if (t.includes("final")) return "final";
   return "fase_grupos";
 }
 
-/** Estado del partido a partir del código corto de la API. */
-function estadoDesdeApi(corto: string): EstadoPartido {
-  const fin = ["FT", "AET", "PEN", "WO", "AWD"];
-  const vivo = ["1H", "2H", "HT", "ET", "BT", "P", "LIVE", "INT"];
-  if (fin.includes(corto)) return "finalizado";
-  if (vivo.includes(corto)) return "en_vivo";
-  return "programado";
-}
-
-/** Calcula el signo 1/X/2; null si faltan goles o el partido no ha terminado. */
 function calcularSigno(
   gl: number | null,
   gv: number | null,
@@ -51,82 +53,66 @@ function calcularSigno(
   return "X";
 }
 
-function profundidad(r: Ronda): number {
-  return ORDEN_RONDA.indexOf(r);
-}
+/**
+ * Construye el modelo DatosTorneo a partir de una lista de partidos ya
+ * normalizados (campos mínimos). Asigna el índice de quiniela por la lista
+ * OFICIAL de 36 partidos y deduce progreso de selecciones y campeón.
+ */
+function construirTorneo(
+  base: Array<{
+    id: string | number;
+    ronda: Ronda;
+    grupo?: string;
+    local: string;
+    visitante: string;
+    gl: number | null;
+    gv: number | null;
+    estado: EstadoPartido;
+    fecha: string;
+    ganadorLocal?: boolean;
+    ganadorVisitante?: boolean;
+  }>,
+  fuente: "api" | "demo",
+  proveedor: string
+): DatosTorneo {
+  const partidos: Partido[] = base
+    .map((p) => ({
+      id: p.id,
+      indiceQuiniela: indiceDePartido(p.local, p.visitante),
+      ronda: p.ronda,
+      grupo: p.grupo,
+      local: p.local,
+      visitante: p.visitante,
+      golesLocal: p.gl,
+      golesVisitante: p.gv,
+      estado: p.estado,
+      fecha: p.fecha,
+      signo: calcularSigno(p.gl, p.gv, p.estado),
+    }))
+    // Filtra el ruido de la fuente: solo partidos de la quiniela oficial o de
+    // eliminatorias reconocidas (descarta amistosos/clasificatorios ajenos).
+    .filter((p) => p.indiceQuiniela !== null || p.ronda !== "fase_grupos");
 
-/** Normaliza la respuesta cruda de API-Football a nuestro modelo DatosTorneo. */
-function normalizar(respuesta: any[]): DatosTorneo {
-  // 1. Mapear cada fixture a un Partido.
-  const partidosCrudos = respuesta.map((f: any) => {
-    const estado = estadoDesdeApi(f?.fixture?.status?.short ?? "NS");
-    const gl = f?.goals?.home ?? null;
-    const gv = f?.goals?.away ?? null;
-    const ronda = rondaDesdeTexto(f?.league?.round ?? "");
-    return {
-      id: f?.fixture?.id,
-      ronda,
-      local: normalizarEquipo(f?.teams?.home?.name ?? ""),
-      visitante: normalizarEquipo(f?.teams?.away?.name ?? ""),
-      golesLocal: gl,
-      golesVisitante: gv,
-      estado,
-      fecha: f?.fixture?.date ?? "",
-      signo: calcularSigno(gl, gv, estado),
-      ganadorHome: f?.teams?.home?.winner === true,
-      ganadorAway: f?.teams?.away?.winner === true,
-    };
-  });
-
-  // 2. Asignar índice de quiniela (0-35) a los 36 primeros partidos de grupos,
-  //    ordenados cronológicamente.
-  const grupos = partidosCrudos
-    .filter((p) => p.ronda === "fase_grupos")
-    .sort((a, b) => (a.fecha < b.fecha ? -1 : a.fecha > b.fecha ? 1 : 0));
-
-  const indicePorId = new Map<any, number>();
-  grupos.slice(0, 36).forEach((p, i) => indicePorId.set(p.id, i));
-
-  const partidos: Partido[] = partidosCrudos.map((p) => ({
-    id: p.id,
-    indiceQuiniela: indicePorId.has(p.id) ? indicePorId.get(p.id)! : null,
-    ronda: p.ronda,
-    local: p.local,
-    visitante: p.visitante,
-    golesLocal: p.golesLocal,
-    golesVisitante: p.golesVisitante,
-    estado: p.estado,
-    fecha: p.fecha,
-    signo: p.signo,
-  }));
-
-  // 3. Progreso de selecciones: ronda más lejana en la que aparece cada equipo.
-  //    Aparecer en un fixture de una ronda implica haberse clasificado a ella.
+  // Progreso: ronda más lejana en la que aparece cada selección.
   const progreso: ProgresoEquipos = {};
   const registrar = (equipo: string, ronda: Ronda) => {
     if (!equipo || ronda === "fase_grupos") return;
     const actual = progreso[equipo];
-    if (!actual || profundidad(ronda) > profundidad(actual)) {
-      progreso[equipo] = ronda;
-    }
+    if (!actual || profundidad(ronda) > profundidad(actual)) progreso[equipo] = ronda;
   };
-  for (const p of partidosCrudos) {
+  for (const p of base) {
     registrar(p.local, p.ronda);
     registrar(p.visitante, p.ronda);
   }
 
-  // 4. Campeón: ganador de la final ya finalizada.
+  // Campeón: ganador de la final ya finalizada.
   let campeon: string | null = null;
-  const final = partidosCrudos.find(
-    (p) => p.ronda === "final" && p.estado === "finalizado"
-  );
+  const final = base.find((p) => p.ronda === "final" && p.estado === "finalizado");
   if (final) {
-    if (final.ganadorHome) campeon = final.local;
-    else if (final.ganadorAway) campeon = final.visitante;
-    else if (final.golesLocal !== null && final.golesVisitante !== null) {
-      campeon =
-        final.golesLocal > final.golesVisitante ? final.local : final.visitante;
-    }
+    if (final.ganadorLocal) campeon = final.local;
+    else if (final.ganadorVisitante) campeon = final.visitante;
+    else if (final.gl !== null && final.gv !== null)
+      campeon = final.gl > final.gv ? final.local : final.visitante;
     if (campeon) progreso[campeon] = "campeon";
   }
 
@@ -134,42 +120,123 @@ function normalizar(respuesta: any[]): DatosTorneo {
     partidos,
     progreso,
     campeon,
-    fuente: "api",
+    fuente,
+    proveedor,
     actualizado: new Date().toISOString(),
   };
 }
 
+// ─── Fuente 1: API-Football ────────────────────────────────────────────────
+async function desdeApiFootball(apiKey: string): Promise<DatosTorneo> {
+  const url =
+    "https://v3.football.api-sports.io/fixtures?league=1&season=2026";
+  const res = await fetch(url, {
+    headers: { "x-apisports-key": apiKey },
+    next: { revalidate },
+  });
+  if (!res.ok) throw new Error(`API-Football ${res.status}`);
+  const json = await res.json();
+  const lista = Array.isArray(json?.response) ? json.response : [];
+  if (lista.length === 0) throw new Error("API-Football sin partidos");
+
+  const finalizados = ["FT", "AET", "PEN", "WO", "AWD"];
+  const enVivo = ["1H", "2H", "HT", "ET", "BT", "P", "LIVE", "INT"];
+
+  const base = lista.map((f: any) => {
+    const corto = f?.fixture?.status?.short ?? "NS";
+    const estado: EstadoPartido = finalizados.includes(corto)
+      ? "finalizado"
+      : enVivo.includes(corto)
+      ? "en_vivo"
+      : "programado";
+    return {
+      id: f?.fixture?.id,
+      ronda: rondaDesdeTexto(f?.league?.round ?? ""),
+      local: normalizarEquipo(f?.teams?.home?.name ?? ""),
+      visitante: normalizarEquipo(f?.teams?.away?.name ?? ""),
+      gl: f?.goals?.home ?? null,
+      gv: f?.goals?.away ?? null,
+      estado,
+      fecha: f?.fixture?.date ?? "",
+      ganadorLocal: f?.teams?.home?.winner === true,
+      ganadorVisitante: f?.teams?.away?.winner === true,
+    };
+  });
+
+  const datos = construirTorneo(base, "api", "API-Football");
+  if (!datos.partidos.some((p) => p.indiceQuiniela !== null))
+    throw new Error("API-Football no casa con la quiniela");
+  return datos;
+}
+
+// ─── Fuente 2: TheSportsDB (gratis, sin clave) ─────────────────────────────
+async function desdeSportsDb(): Promise<DatosTorneo> {
+  // Liga 4429 = FIFA World Cup. Clave "3" = clave pública de pruebas (gratis).
+  const url =
+    "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4429&s=2026";
+  const res = await fetch(url, { next: { revalidate } });
+  if (!res.ok) throw new Error(`TheSportsDB ${res.status}`);
+  const json = await res.json();
+  const eventos = Array.isArray(json?.events) ? json.events : [];
+  if (eventos.length === 0) throw new Error("TheSportsDB sin eventos");
+
+  const base = eventos.map((e: any) => {
+    const gl =
+      e?.intHomeScore !== null && e?.intHomeScore !== undefined && e?.intHomeScore !== ""
+        ? Number(e.intHomeScore)
+        : null;
+    const gv =
+      e?.intAwayScore !== null && e?.intAwayScore !== undefined && e?.intAwayScore !== ""
+        ? Number(e.intAwayScore)
+        : null;
+    const status = (e?.strStatus ?? "").toLowerCase();
+    let estado: EstadoPartido = "programado";
+    if (status.includes("finish") || status === "ft" || status === "aet" || status === "pen")
+      estado = "finalizado";
+    else if (["1h", "2h", "ht", "et", "live"].some((s) => status.includes(s)))
+      estado = "en_vivo";
+    else if (gl !== null && gv !== null) estado = "finalizado"; // heurística
+    return {
+      id: e?.idEvent ?? `${e?.strHomeTeam}-${e?.strAwayTeam}`,
+      ronda: rondaDesdeTexto(e?.strRound || e?.strStage || ""),
+      local: normalizarEquipo(e?.strHomeTeam ?? ""),
+      visitante: normalizarEquipo(e?.strAwayTeam ?? ""),
+      gl,
+      gv,
+      estado,
+      fecha: e?.strTimestamp || e?.dateEvent || "",
+    };
+  });
+
+  const datos = construirTorneo(base, "api", "TheSportsDB");
+  if (!datos.partidos.some((p) => p.indiceQuiniela !== null))
+    throw new Error("TheSportsDB no casa con la quiniela");
+  return datos;
+}
+
 export async function GET() {
   const apiKey = process.env.API_FOOTBALL_KEY;
+  const sinCache = { headers: { "Cache-Control": "no-store" } } as const;
 
-  // Sin clave -> servir datos demo (la app es 100% funcional igualmente).
-  if (!apiKey) {
-    return NextResponse.json(datosDemo(), {
-      headers: { "Cache-Control": "no-store" },
-    });
+  // 1. API-Football (si hay clave)
+  if (apiKey) {
+    try {
+      return NextResponse.json(await desdeApiFootball(apiKey));
+    } catch {
+      /* cae a la siguiente fuente */
+    }
   }
 
-  try {
-    const url = `${API_HOST}/fixtures?league=${LIGA_MUNDIAL}&season=${TEMPORADA}`;
-    const res = await fetch(url, {
-      headers: { "x-apisports-key": apiKey },
-      next: { revalidate },
-    });
-
-    if (!res.ok) throw new Error(`API respondió ${res.status}`);
-
-    const json = await res.json();
-    const lista = Array.isArray(json?.response) ? json.response : [];
-    if (lista.length === 0) throw new Error("La API no devolvió partidos");
-
-    const datos = normalizar(lista);
-    return NextResponse.json(datos);
-  } catch (err) {
-    // Cualquier fallo (cuota, red, formato) -> degradar a demo sin romper la UI.
-    const demo = datosDemo();
-    return NextResponse.json(
-      { ...demo, fuente: "demo" as const },
-      { headers: { "Cache-Control": "no-store" }, status: 200 }
-    );
+  // 2. TheSportsDB (gratis, SIN clave) — fuente online por defecto.
+  //    Devuelve los resultados reales del Mundial. Desactivable con SPORTSDB_OFF=1.
+  if (process.env.SPORTSDB_OFF !== "1") {
+    try {
+      return NextResponse.json(await desdeSportsDb());
+    } catch {
+      /* cae a demo */
+    }
   }
+
+  // 3. Demo (solo si no hay conexión ni clave)
+  return NextResponse.json(datosDemo(), sinCache);
 }

@@ -20,23 +20,23 @@ npm install
 npm run dev
 ```
 
-Abre <http://localhost:3000>. **Sin configurar nada** la app arranca en *modo
-demo* con un torneo de ejemplo, para que veas el ranking y la auditoría
-funcionando de inmediato.
+Abre <http://localhost:3000>. **Sin configurar nada** la app ya muestra los
+**resultados reales** del Mundial vía [TheSportsDB](https://www.thesportsdb.com)
+(gratis, sin clave ni registro).
 
-### Conectar datos reales
+### Fuentes de resultados (en orden de preferencia)
 
-1. Crea una cuenta gratuita en [API-Football](https://www.api-football.com/)
-   (plan *Free*: 100 peticiones/día).
-2. Copia `.env.example` a `.env.local` y pega tu clave:
-   ```
-   API_FOOTBALL_KEY=tu_clave_aqui
-   ```
-3. Reinicia `npm run dev`. La etiqueta de cabecera pasará de *Modo demo* a
-   *Datos reales (API)*.
+1. **API-Football** — si defines `API_FOOTBALL_KEY` (cuenta gratuita,
+   100 req/día en [api-football.com](https://www.api-football.com/)). Datos más
+   completos: eliminatorias y campeón mejor detectados.
+2. **TheSportsDB** — *por defecto*, gratis y sin clave. Resultados reales del
+   torneo. Es la opción "sin complicaciones".
+3. **Demo offline** — solo si no hay conexión a ninguna fuente, para que la app
+   nunca se quede en blanco.
 
-> Si la API falla o agota la cuota, la app **degrada automáticamente** a modo
-> demo sin romperse.
+El proxy descarta automáticamente partidos ajenos a la quiniela y mapea cada
+resultado a su casilla oficial. La cabecera indica en todo momento qué fuente
+está activa.
 
 ---
 
