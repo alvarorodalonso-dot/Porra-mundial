@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: #0a0f0d;
+  color: #e7f0ec;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Fondo con sutil degradado esmeralda para la "calidez analítica". */
+body {
+  background-image:
+    radial-gradient(1200px 600px at 85% -10%, rgba(16, 185, 129, 0.12), transparent 60%),
+    radial-gradient(900px 500px at -10% 20%, rgba(5, 150, 105, 0.08), transparent 55%);
+  background-attachment: fixed;
+  min-height: 100dvh;
+}
+
+/* Scrollbar discreta acorde al tema. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1f312a;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #2a4138;
+}
+
+/* Tipografía tabular para cifras alineadas. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
