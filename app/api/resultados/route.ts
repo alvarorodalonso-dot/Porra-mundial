@@ -22,7 +22,28 @@ import { indiceDePartido } from "@/lib/quiniela";
 //   3. Datos demo    (si todo lo anterior falla — la app nunca se rompe)
 // ───────────────────────────────────────────────────────────────────────────
 
-export const revalidate = 60; // cachea la respuesta 60 s
+// Ruta siempre dinámica: cada petición consulta la fuente en vivo.
+export const dynamic = "force-dynamic";
+
+/**
+ * fetch con timeout y SIN caché de datos de Next. Usar la caché de Next
+ * (`next: { revalidate }`) puede dejar escapar el rechazo del fetch como
+ * unhandledRejection cuando la red falla (p. ej. TLS corporativo); aquí lo
+ * controlamos para poder capturarlo siempre en el try/catch del GET.
+ */
+async function fetchSeguro(url: string, headers?: Record<string, string>) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    return await fetch(url, {
+      headers,
+      cache: "no-store",
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(t);
+  }
+}
 
 function profundidad(r: Ronda): number {
   return ORDEN_RONDA.indexOf(r);
@@ -130,10 +151,7 @@ function construirTorneo(
 async function desdeApiFootball(apiKey: string): Promise<DatosTorneo> {
   const url =
     "https://v3.football.api-sports.io/fixtures?league=1&season=2026";
-  const res = await fetch(url, {
-    headers: { "x-apisports-key": apiKey },
-    next: { revalidate },
-  });
+  const res = await fetchSeguro(url, { "x-apisports-key": apiKey });
   if (!res.ok) throw new Error(`API-Football ${res.status}`);
   const json = await res.json();
   const lista = Array.isArray(json?.response) ? json.response : [];
@@ -174,7 +192,7 @@ async function desdeSportsDb(): Promise<DatosTorneo> {
   // Liga 4429 = FIFA World Cup. Clave "3" = clave pública de pruebas (gratis).
   const url =
     "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4429&s=2026";
-  const res = await fetch(url, { next: { revalidate } });
+  const res = await fetchSeguro(url);
   if (!res.ok) throw new Error(`TheSportsDB ${res.status}`);
   const json = await res.json();
   const eventos = Array.isArray(json?.events) ? json.events : [];
@@ -215,28 +233,34 @@ async function desdeSportsDb(): Promise<DatosTorneo> {
 }
 
 export async function GET() {
-  const apiKey = process.env.API_FOOTBALL_KEY;
   const sinCache = { headers: { "Cache-Control": "no-store" } } as const;
 
-  // 1. API-Football (si hay clave)
-  if (apiKey) {
-    try {
-      return NextResponse.json(await desdeApiFootball(apiKey));
-    } catch {
-      /* cae a la siguiente fuente */
+  // Red de seguridad global: pase lo que pase, nunca devolvemos un 500.
+  try {
+    const apiKey = process.env.API_FOOTBALL_KEY;
+
+    // 1. API-Football (si hay clave)
+    if (apiKey) {
+      try {
+        return NextResponse.json(await desdeApiFootball(apiKey), sinCache);
+      } catch {
+        /* cae a la siguiente fuente */
+      }
     }
+
+    // 2. TheSportsDB (gratis, SIN clave) — fuente online por defecto.
+    //    Devuelve los resultados reales del Mundial. Desactivable con SPORTSDB_OFF=1.
+    if (process.env.SPORTSDB_OFF !== "1") {
+      try {
+        return NextResponse.json(await desdeSportsDb(), sinCache);
+      } catch {
+        /* cae a demo */
+      }
+    }
+  } catch {
+    /* cualquier imprevisto -> demo */
   }
 
-  // 2. TheSportsDB (gratis, SIN clave) — fuente online por defecto.
-  //    Devuelve los resultados reales del Mundial. Desactivable con SPORTSDB_OFF=1.
-  if (process.env.SPORTSDB_OFF !== "1") {
-    try {
-      return NextResponse.json(await desdeSportsDb());
-    } catch {
-      /* cae a demo */
-    }
-  }
-
-  // 3. Demo (solo si no hay conexión ni clave)
+  // 3. Demo (si no hay conexión ni clave, o si algo falló)
   return NextResponse.json(datosDemo(), sinCache);
 }
