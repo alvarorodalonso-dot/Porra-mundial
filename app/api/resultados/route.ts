@@ -282,27 +282,42 @@ async function desdeSportsDb(): Promise<DatosTorneo> {
   return datos;
 }
 
+// Caché del resultado ya ensamblado, compartida por todas las peticiones de la
+// instancia. Evita machacar la API externa (clave para respetar el límite de
+// 100 peticiones/día del plan gratuito de API-Football).
+let cacheResultado: { at: number; data: DatosTorneo; ttl: number } | null = null;
+const TTL_APIFOOTBALL = 15 * 60_000; // 15 min -> máx ~96 llamadas/día (< 100)
+const TTL_SPORTSDB = 90_000; // 90 s (su coste real ya lo amortigua la caché por jornada)
+
 export async function GET() {
   const sinCache = { headers: { "Cache-Control": "no-store" } } as const;
+
+  // Servir desde caché si sigue vigente.
+  if (cacheResultado && Date.now() - cacheResultado.at < cacheResultado.ttl) {
+    return NextResponse.json(cacheResultado.data, sinCache);
+  }
 
   // Red de seguridad global: pase lo que pase, nunca devolvemos un 500.
   try {
     const apiKey = process.env.API_FOOTBALL_KEY;
 
-    // 1. API-Football (si hay clave)
+    // 1. API-Football (si hay clave) — fuente completa y oficial.
     if (apiKey) {
       try {
-        return NextResponse.json(await desdeApiFootball(apiKey), sinCache);
+        const data = await desdeApiFootball(apiKey);
+        cacheResultado = { at: Date.now(), data, ttl: TTL_APIFOOTBALL };
+        return NextResponse.json(data, sinCache);
       } catch {
         /* cae a la siguiente fuente */
       }
     }
 
-    // 2. TheSportsDB (gratis, SIN clave) — fuente online por defecto.
-    //    Devuelve los resultados reales del Mundial. Desactivable con SPORTSDB_OFF=1.
+    // 2. TheSportsDB (gratis, SIN clave). Desactivable con SPORTSDB_OFF=1.
     if (process.env.SPORTSDB_OFF !== "1") {
       try {
-        return NextResponse.json(await desdeSportsDb(), sinCache);
+        const data = await desdeSportsDb();
+        cacheResultado = { at: Date.now(), data, ttl: TTL_SPORTSDB };
+        return NextResponse.json(data, sinCache);
       } catch {
         /* cae a demo */
       }
@@ -311,6 +326,6 @@ export async function GET() {
     /* cualquier imprevisto -> demo */
   }
 
-  // 3. Demo (si no hay conexión ni clave, o si algo falló)
+  // 3. Demo (si no hay conexión ni clave, o si algo falló). No se cachea.
   return NextResponse.json(datosDemo(), sinCache);
 }
