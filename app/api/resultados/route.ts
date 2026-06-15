@@ -188,43 +188,93 @@ async function desdeApiFootball(apiKey: string): Promise<DatosTorneo> {
 }
 
 // ─── Fuente 2: TheSportsDB (gratis, sin clave) ─────────────────────────────
-async function desdeSportsDb(): Promise<DatosTorneo> {
-  // Liga 4429 = FIFA World Cup. Clave "3" = clave pública de pruebas (gratis).
-  const url =
-    "https://www.thesportsdb.com/api/v1/json/3/eventsseason.php?id=4429&s=2026";
-  const res = await fetchSeguro(url);
-  if (!res.ok) throw new Error(`TheSportsDB ${res.status}`);
-  const json = await res.json();
-  const eventos = Array.isArray(json?.events) ? json.events : [];
-  if (eventos.length === 0) throw new Error("TheSportsDB sin eventos");
+// El endpoint "eventsseason" devuelve datos incompletos en la capa gratuita,
+// así que recorremos el calendario DÍA A DÍA ("eventsday") desde el inicio del
+// torneo hasta hoy y unimos todos los partidos. Cacheamos por jornada para no
+// saturar la API (las jornadas pasadas no cambian; solo hoy se refresca a menudo).
+const SPORTSDB_LIGA = 4429; // FIFA World Cup
+const TORNEO_INICIO = "2026-06-11";
+const TORNEO_FIN = "2026-07-19";
 
-  const base = eventos.map((e: any) => {
-    const gl =
-      e?.intHomeScore !== null && e?.intHomeScore !== undefined && e?.intHomeScore !== ""
-        ? Number(e.intHomeScore)
-        : null;
-    const gv =
-      e?.intAwayScore !== null && e?.intAwayScore !== undefined && e?.intAwayScore !== ""
-        ? Number(e.intAwayScore)
-        : null;
-    const status = (e?.strStatus ?? "").toLowerCase();
-    let estado: EstadoPartido = "programado";
-    if (status.includes("finish") || status === "ft" || status === "aet" || status === "pen")
-      estado = "finalizado";
-    else if (["1h", "2h", "ht", "et", "live"].some((s) => status.includes(s)))
-      estado = "en_vivo";
-    else if (gl !== null && gv !== null) estado = "finalizado"; // heurística
-    return {
-      id: e?.idEvent ?? `${e?.strHomeTeam}-${e?.strAwayTeam}`,
-      ronda: rondaDesdeTexto(e?.strRound || e?.strStage || ""),
-      local: normalizarEquipo(e?.strHomeTeam ?? ""),
-      visitante: normalizarEquipo(e?.strAwayTeam ?? ""),
-      gl,
-      gv,
-      estado,
-      fecha: e?.strTimestamp || e?.dateEvent || "",
-    };
-  });
+// Caché en memoria por fecha (persiste mientras la instancia esté caliente).
+const cacheJornada = new Map<string, { at: number; eventos: any[] }>();
+
+function fechasTorneoHasta(hoy: string): string[] {
+  const ini = new Date(`${TORNEO_INICIO}T00:00:00Z`).getTime();
+  const fin = Math.min(
+    new Date(`${hoy}T00:00:00Z`).getTime(),
+    new Date(`${TORNEO_FIN}T00:00:00Z`).getTime()
+  );
+  const out: string[] = [];
+  for (let t = ini; t <= fin; t += 86_400_000) {
+    out.push(new Date(t).toISOString().slice(0, 10));
+  }
+  return out;
+}
+
+async function eventosDeJornada(fecha: string, esReciente: boolean): Promise<any[]> {
+  const ttl = esReciente ? 90_000 : 12 * 3_600_000; // hoy/ayer 90 s; pasado 12 h
+  const cacheado = cacheJornada.get(fecha);
+  if (cacheado && Date.now() - cacheado.at < ttl) return cacheado.eventos;
+  try {
+    const url = `https://www.thesportsdb.com/api/v1/json/3/eventsday.php?d=${fecha}&l=${SPORTSDB_LIGA}`;
+    const res = await fetchSeguro(url);
+    if (!res.ok) throw new Error(String(res.status));
+    const json = await res.json();
+    const eventos = Array.isArray(json?.events) ? json.events : [];
+    cacheJornada.set(fecha, { at: Date.now(), eventos });
+    return eventos;
+  } catch {
+    return cacheado?.eventos ?? []; // ante error, devolvemos lo último que tuviéramos
+  }
+}
+
+function eventoABase(e: any) {
+  const num = (v: any) =>
+    v !== null && v !== undefined && v !== "" ? Number(v) : null;
+  const gl = num(e?.intHomeScore);
+  const gv = num(e?.intAwayScore);
+  const status = (e?.strStatus ?? "").toLowerCase();
+  let estado: EstadoPartido = "programado";
+  if (status.includes("finish") || status === "ft" || status === "aet" || status === "pen")
+    estado = "finalizado";
+  else if (["1h", "2h", "ht", "et", "live"].some((s) => status.includes(s)))
+    estado = "en_vivo";
+  else if (gl !== null && gv !== null) estado = "finalizado";
+  return {
+    id: e?.idEvent ?? `${e?.strHomeTeam}-${e?.strAwayTeam}-${e?.dateEvent}`,
+    ronda: rondaDesdeTexto(e?.strRound || e?.strStage || ""),
+    local: normalizarEquipo(e?.strHomeTeam ?? ""),
+    visitante: normalizarEquipo(e?.strAwayTeam ?? ""),
+    gl,
+    gv,
+    estado,
+    fecha: e?.strTimestamp || e?.dateEvent || "",
+  };
+}
+
+async function desdeSportsDb(): Promise<DatosTorneo> {
+  const hoy = new Date().toISOString().slice(0, 10);
+  const fechas = fechasTorneoHasta(hoy);
+  if (fechas.length === 0) throw new Error("Fuera del rango del torneo");
+
+  // Las dos últimas jornadas se consideran "recientes" (refresco frecuente).
+  const recientes = new Set(fechas.slice(-2));
+  const listas = await Promise.all(
+    fechas.map((f) => eventosDeJornada(f, recientes.has(f)))
+  );
+
+  // Unir y deduplicar por id de evento.
+  const vistos = new Set<string>();
+  const base: ReturnType<typeof eventoABase>[] = [];
+  for (const e of listas.flat()) {
+    const id = String(e?.idEvent ?? `${e?.strHomeTeam}-${e?.strAwayTeam}-${e?.dateEvent}`);
+    if (vistos.has(id)) continue;
+    vistos.add(id);
+    base.push(eventoABase(e));
+  }
+
+  if (base.length === 0) throw new Error("TheSportsDB sin eventos");
 
   const datos = construirTorneo(base, "api", "TheSportsDB");
   if (!datos.partidos.some((p) => p.indiceQuiniela !== null))
