@@ -282,12 +282,77 @@ async function desdeSportsDb(): Promise<DatosTorneo> {
   return datos;
 }
 
+// ─── Fuente 0: ESPN (gratis, SIN clave, COMPLETA) — fuente principal ───────
+// El endpoint público de marcadores de ESPN devuelve todo el calendario del
+// Mundial con resultados en vivo. Se pide todo el rango del torneo en UNA sola
+// llamada. Es la fuente que usan muchísimos marcadores online.
+const ESPN_URL =
+  "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard";
+const ESPN_INICIO = "20260611";
+const ESPN_FIN = "20260719";
+
+function eventoEspnABase(e: any) {
+  const comp = e?.competitions?.[0];
+  const cs: any[] = comp?.competitors ?? [];
+  const home = cs.find((c) => c?.homeAway === "home");
+  const away = cs.find((c) => c?.homeAway === "away");
+  if (!home || !away) return null;
+
+  const tipo = e?.status?.type ?? {};
+  const estado: EstadoPartido =
+    tipo.state === "post" || tipo.completed === true
+      ? "finalizado"
+      : tipo.state === "in"
+      ? "en_vivo"
+      : "programado";
+
+  const num = (v: any) =>
+    v !== null && v !== undefined && v !== "" ? Number(v) : null;
+  const gl = num(home.score);
+  const gv = num(away.score);
+
+  // Ronda: para fase de grupos ESPN no la marca; en eliminatorias suele venir
+  // en las "notes". Mapeamos por texto y, si no, fase de grupos.
+  const textoRonda = String(comp?.notes?.[0]?.headline ?? e?.season?.slug ?? "");
+
+  return {
+    id: e?.id ?? `${home.team?.displayName}-${away.team?.displayName}`,
+    ronda: rondaDesdeTexto(textoRonda),
+    local: normalizarEquipo(home.team?.displayName ?? home.team?.name ?? ""),
+    visitante: normalizarEquipo(away.team?.displayName ?? away.team?.name ?? ""),
+    gl,
+    gv,
+    estado,
+    fecha: e?.date ?? "",
+    ganadorLocal: home.winner === true,
+    ganadorVisitante: away.winner === true,
+  };
+}
+
+async function desdeEspn(): Promise<DatosTorneo> {
+  const url = `${ESPN_URL}?dates=${ESPN_INICIO}-${ESPN_FIN}&limit=400`;
+  const res = await fetchSeguro(url);
+  if (!res.ok) throw new Error(`ESPN ${res.status}`);
+  const json = await res.json();
+  const eventos: any[] = Array.isArray(json?.events) ? json.events : [];
+  if (eventos.length === 0) throw new Error("ESPN sin eventos");
+
+  const base = eventos.map(eventoEspnABase).filter(Boolean) as ReturnType<
+    typeof eventoEspnABase
+  >[];
+
+  const datos = construirTorneo(base as any, "api", "ESPN");
+  if (!datos.partidos.some((p) => p.indiceQuiniela !== null))
+    throw new Error("ESPN no casa con la quiniela");
+  return datos;
+}
+
 // Caché del resultado ya ensamblado, compartida por todas las peticiones de la
-// instancia. Evita machacar la API externa (clave para respetar el límite de
-// 100 peticiones/día del plan gratuito de API-Football).
+// instancia, para no machacar la fuente externa.
 let cacheResultado: { at: number; data: DatosTorneo; ttl: number } | null = null;
+const TTL_ESPN = 60_000; // 60 s (ESPN no tiene límite estricto)
 const TTL_APIFOOTBALL = 15 * 60_000; // 15 min -> máx ~96 llamadas/día (< 100)
-const TTL_SPORTSDB = 90_000; // 90 s (su coste real ya lo amortigua la caché por jornada)
+const TTL_SPORTSDB = 90_000; // 90 s
 
 export async function GET() {
   const sinCache = { headers: { "Cache-Control": "no-store" } } as const;
@@ -299,9 +364,17 @@ export async function GET() {
 
   // Red de seguridad global: pase lo que pase, nunca devolvemos un 500.
   try {
-    const apiKey = process.env.API_FOOTBALL_KEY;
+    // 1. ESPN (gratis, sin clave, COMPLETA) — fuente principal.
+    try {
+      const data = await desdeEspn();
+      cacheResultado = { at: Date.now(), data, ttl: TTL_ESPN };
+      return NextResponse.json(data, sinCache);
+    } catch {
+      /* cae a la siguiente fuente */
+    }
 
-    // 1. API-Football (si hay clave) — fuente completa y oficial.
+    // 2. API-Football (solo si hay clave Y plan de pago con acceso a 2026).
+    const apiKey = process.env.API_FOOTBALL_KEY;
     if (apiKey) {
       try {
         const data = await desdeApiFootball(apiKey);
@@ -312,7 +385,7 @@ export async function GET() {
       }
     }
 
-    // 2. TheSportsDB (gratis, SIN clave). Desactivable con SPORTSDB_OFF=1.
+    // 3. TheSportsDB (gratis, sin clave; datos parciales). Desactivable con SPORTSDB_OFF=1.
     if (process.env.SPORTSDB_OFF !== "1") {
       try {
         const data = await desdeSportsDb();
@@ -326,6 +399,6 @@ export async function GET() {
     /* cualquier imprevisto -> demo */
   }
 
-  // 3. Demo (si no hay conexión ni clave, o si algo falló). No se cachea.
+  // 4. Demo (si no hay conexión, o si todo falló). No se cachea.
   return NextResponse.json(datosDemo(), sinCache);
 }
