@@ -72,4 +72,26 @@ export const PARTICIPANTES: Boleto[] = [
       "X", "1", "2", "2", "2", "1", "2", "2", "X", "1", "2", "2",
     ],
   },
+  {
+    id: "lucho_1",
+    nombre: "Luis del Río (Lucho)",
+    campeon: "España",
+    equipos: [
+      "España",
+      "Colombia",
+      "Argentina",
+      "Brasil",
+      "Alemania",
+      "Portugal",
+      "Países Bajos",
+      "Marruecos",
+      "Noruega",
+      "Suiza",
+    ],
+    quiniela: [
+      "X", "1", "1", "1", "X", "1", "X", "1", "2", "1", "1", "1",
+      "2", "1", "1", "2", "1", "1", "1", "1", "1", "1", "1", "2",
+      "1", "1", "2", "2", "X", "X", "1", "X", "X", "1", "1", "X",
+    ],
+  },
 ];
