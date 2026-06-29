@@ -20,6 +20,13 @@ function corto(id: string, nombre: string): string {
   return map[id] ?? nombre.split(" ")[0].slice(0, 3);
 }
 
+/** ¿Nombre de equipo aún sin definir (placeholder de eliminatoria)? */
+function esPlaceholder(nombre: string): boolean {
+  return /winner|loser|\bplace\b|round of|quarterfinal|semifinal|\bgroup\b|tbd|to be/i.test(
+    nombre || ""
+  );
+}
+
 function fechaCorta(iso: string): string {
   if (!iso) return "";
   const d = new Date(iso);
@@ -82,7 +89,14 @@ export default function Partidos({ datos, ranking }: Props) {
         enVivo: f.partido?.estado === "en_vivo",
       }));
     const eliminatorias = datos.partidos
-      .filter((p) => p.indiceQuiniela === null && p.estado !== "finalizado")
+      .filter(
+        (p) =>
+          p.indiceQuiniela === null &&
+          p.estado !== "finalizado" &&
+          // Solo llaves ya definidas (sin "Round of 32 X Winner", etc.).
+          !esPlaceholder(p.local) &&
+          !esPlaceholder(p.visitante)
+      )
       .map((p) => ({
         clave: `k-${p.id}`,
         fecha: p.fecha,

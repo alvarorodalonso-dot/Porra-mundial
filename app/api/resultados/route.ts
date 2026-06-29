@@ -49,9 +49,17 @@ function profundidad(r: Ronda): number {
   return ORDEN_RONDA.indexOf(r);
 }
 
+/** ¿Es un nombre "marcador de posición" de una eliminatoria aún sin definir? */
+function esPlaceholder(nombre: string): boolean {
+  return /winner|loser|\bplace\b|round of|quarterfinal|semifinal|\bgroup\b|tbd|to be/i.test(
+    nombre || ""
+  );
+}
+
 /** Traduce un texto de ronda (en/es) a nuestra enumeración interna. */
 function rondaDesdeTexto(texto: string): Ronda {
-  const t = (texto || "").toLowerCase();
+  // Normaliza separadores: ESPN usa slugs con guiones ("round-of-32").
+  const t = (texto || "").toLowerCase().replace(/[-_]+/g, " ");
   if (t.includes("round of 32") || t.includes("dieciseis") || t.includes("1/16"))
     return "dieciseisavos";
   if (t.includes("round of 16") || t.includes("octav") || t.includes("1/8"))
@@ -117,7 +125,9 @@ function construirTorneo(
   // Progreso: ronda más lejana en la que aparece cada selección.
   const progreso: ProgresoEquipos = {};
   const registrar = (equipo: string, ronda: Ronda) => {
-    if (!equipo || ronda === "fase_grupos") return;
+    // Ignora nombres "marcador de posición" de eliminatorias aún sin definir
+    // (ej. "Round of 32 3 Winner", "Group A 2nd Place").
+    if (!equipo || ronda === "fase_grupos" || esPlaceholder(equipo)) return;
     const actual = progreso[equipo];
     if (!actual || profundidad(ronda) > profundidad(actual)) progreso[equipo] = ronda;
   };
