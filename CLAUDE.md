@@ -13,9 +13,16 @@ contra resultados reales. Ranking general automático + panel de auditoría por 
 Next.js: el navegador nunca llama a la API externa (evita CORS en móvil).
 
 ## Fuentes de resultados (orden de preferencia)
-1. **API-Football** si se define `API_FOOTBALL_KEY` (cuenta gratis, 100 req/día).
-2. **TheSportsDB** — por defecto, gratis y sin clave.
-3. **Demo offline** — fallback para que la app nunca quede en blanco.
+1. **ESPN** (`site.api.espn.com/.../soccer/fifa.world/scoreboard?dates=20260611-20260719`) —
+   PRINCIPAL: gratis, sin clave, COMPLETA, todo el torneo en 1 llamada. La ronda viene en
+   `event.season.slug` con guiones (`round-of-32`); hay que normalizar guiones al clasificar.
+2. **API-Football** solo con `API_FOOTBALL_KEY` de PAGO (el plan gratis NO da acceso a 2026).
+3. **TheSportsDB** — gratis sin clave, pero datos INCOMPLETOS (le faltan partidos). Solo respaldo.
+4. **Demo offline** — último recurso para que la app nunca quede en blanco.
+
+> Mapear partidos por EQUIPOS (no por fecha): el calendario real no coincide con las fechas del Excel.
+> Nombres de equipo en inglés normalizados en `lib/equipos.ts`. Placeholders de llaves sin definir
+> ("Round of 32 X Winner") se filtran con `esPlaceholder`.
 
 ## GitHub / despliegue
 - Repos: `alvarorodalonso-dot/porra-mundial-2026` (+ remoto `deploy`).
