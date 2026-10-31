@@ -56,9 +56,17 @@ la configuración real de cada equipo.
 - **Circuito de aprobación explícito**: quién valida el manual de Aresa, quién el de Cecoagro, y
   quién da el visto bueno a un arte final antes de imprenta. Falta que Álvaro lo concrete.
 
+## Datos aportados por Álvaro
+
+- Enlace de SharePoint facilitado el 31-oct-2026 (no abierto desde la sesión en la nube; falta
+  confirmar qué contiene y si es la carpeta del material gráfico de Aresa, de Cecoagro o de ambas):
+  https://alvarob27292879.sharepoint.com/:f:/g/IgBp6Q2R7PUrRpPm-KOlOzfiAfrc7Eg_3d9xKEnnHuf_Tfg?e=f61IuJ
+  Ojo: el dominio (`alvarob27292879`) no es de Cecoagro ni de Aresa; confirmar que es el entorno
+  correcto y que Roy, José y Silvia tienen acceso a él.
+
 ## Datos que faltan (preguntar a Álvaro)
 
-- Ruta o nombre exacto de las bibliotecas de SharePoint de Aresa y Cecoagro.
+- Confirmar qué carpetas del enlace anterior son de Aresa y cuáles de Cecoagro.
 - Dónde está la skill de agencia gráfica de mascotas y cómo se instaló.
 - Responsables que supervisan cada manual de identidad.
 - Quién de producción arranca (Roy, José, Silvia…) y qué piezas son prioritarias (¿qué sacos?).
