@@ -58,15 +58,80 @@ la configuración real de cada equipo.
 
 ## Datos aportados por Álvaro
 
-- Enlace de SharePoint facilitado el 31-oct-2026 (no abierto desde la sesión en la nube; falta
-  confirmar qué contiene y si es la carpeta del material gráfico de Aresa, de Cecoagro o de ambas):
+- Enlace de SharePoint facilitado el 31-oct-2026:
   https://alvarob27292879.sharepoint.com/:f:/g/IgBp6Q2R7PUrRpPm-KOlOzfiAfrc7Eg_3d9xKEnnHuf_Tfg?e=f61IuJ
-  Ojo: el dominio (`alvarob27292879`) no es de Cecoagro ni de Aresa; confirmar que es el entorno
-  correcto y que Roy, José y Silvia tienen acceso a él.
+  `alvarob27292879` es el SharePoint de la empresa: la cuenta alvaro.rodriguez@cecoagro.com
+  cuelga de él. Comprobado con el conector de Microsoft 365. Un comentario anterior en este
+  fichero que decía lo contrario era erróneo.
+- Álvaro pidió revisar **toda la biblioteca MARKETING** de ese SharePoint. Primer mapa abajo.
+
+## Primer mapa (31-oct-2026, leído con el conector de Microsoft 365, solo 1–2 niveles)
+
+Tamaños aproximados según SharePoint. No se ha abierto ningún fichero gráfico, solo se han
+listado las carpetas.
+
+**Biblioteca MARKETING** (raíz del SharePoint de la empresa):
+- `ARESA/` (~660 MB)
+  - `IMAGENES WEB ARESA/` (~500 MB)
+  - `Imagenes instalaciones/` (~144 MB)
+  - `Packaging/`: imágenes de sacos y envases. Bidón Hydroland, BigBags (PDF de julio de 2024),
+    Calcimax, Cereales Agroland, Fertimón 9.8.17 / Cloruro / DAP, Maíz, Nitroland, Patatas,
+    Pradera, Protech Plus y Viña. Son posibles packshots.
+  - `Diseños Premio 24/` y unas cuantas fotos sueltas de la web (Campus Terra, valores).
+- `CECOAGRO/` (~20 MB): `Campaña maíz 2024/`, `Imagenes instalaciones/` y `Mascotas/`. Hay poco material.
+- `AVANTIS/`: `Packaging/`, lona de 300×300 y catálogo de piensos de ganadería.
+- `Logos - TODO/`
+  - `ARESA/`: `ARESA_Logo nuevo`, `ARESA_Logo nuevo_B&W y Negativos`, `_ARESA_Logo viejo` y
+    `_ARESA_Logo 50 aniv`.
+  - `logos y sacos antiguos/`: diseños de Agroland-Fertiland, Verdenatur, Fertimón, Naturcor,
+    European, etiquetado de fertilizantes, sacos antiguos, logos del grupo, etc.
+  - `O Santo/` y `UMAN_Logo/`.
+  - Ficheros sueltos: `CECOAGRO_Logo.zip`, `LogoGrupoAresa.pdf` y logos y emblemas de Equinova.
+- `Presentaciones empresas/`: dosieres de Aresa y del Grupo Aresa (ES/EN), `CECOAGRO.pptx` y
+  la presentación del Grupo Aresa de 2022.
+- `Digital/`: proveedores y agencias (Elogia, Esgalla, Goodbuy, RocketPlace…).
+- `Videos/`: vídeo de presentación de Aresa y vídeo AGEF.
+- `TODOCAMPO/` (diseños de nave y de Superfauna), `Redes Sociales/` y `Firmas correos/`.
+- Ficheros sueltos en la raíz:
+  - `CECOAGRO_ARQUITECTURA DE MARCApdf.pdf`: muy relevante para el manual de Cecoagro.
+  - `Presupuesto y proyectos_ ANONIMO - Rebranding.pdf`.
+  - `Apuntes ideas Marketing.pptx`.
+  - `Pptos renovación material Premio 2024.xlsx`.
+
+**Otras ubicaciones relevantes fuera de MARKETING:**
+- `DROPBOX/7. Marketing/Diseño Envases/LAMINAS/ARESA/`: láminas de sacos de 5, 25 y 40 kg,
+  `2024/` y `ANTIGUAS/` (~650 MB). Hay también `LAMINAS/CLIENTES/` (~630 MB) y `BIG BAGS/`.
+  **Probablemente sean las artes finales de sacos**, clave para la renovación. Falta abrirlas.
+- `DROPBOX/7. Marketing/` también tiene `LOGOs/`, `CATALOGOS/` y `PRESENTACIÓN ARESA/`, y existe
+  `DROPBOX/ARESA - Carpeta Compartida JAC&ICC/1. ARESA/05. Marketing/`. Puede haber duplicados
+  con la biblioteca MARKETING.
+- `DROPBOX/10. Gestión de Envases/`: hay un `SCRAP ARESA.xlsx` con códigos de bobinas y sacos,
+  útil para cruzar con las láminas.
+- Bibliotecas de primer nivel del SharePoint: ADMINISTRACION, ARESA, INFORMES, EXPORT DOCS,
+  LOGÍSTICA, CODIGO PILOTO AVANTIS, CECOAGRO, PRODUCCION, DOCUMENTOS, COMERCIAL, AvexAssets,
+  DROPBOX y MARKETING. **Las bibliotecas ARESA, CECOAGRO y PRODUCCION no se han revisado.**
+
+## El flujo de mascotas ya existe y vive en SharePoint
+
+- Skill: `COMERCIAL/AvantisPET Graphic resources/.claude/skills/creative-agency/` (SKILL.md,
+  roles/, scripts/, discurso/, grafico/, sector/, references/, fuentes.md).
+- Manuales aprobados el 25-sep-2026: `1 Corporativo/1 Manual de marca/` y
+  `2 Avantis Pet/1 Manual de marca/`. Los logotipos vectoriales maestros están en
+  `_Fuentes originales/Logos/_vectorial/` y los trabajos, en `_Admin/creativo/<fecha>-<slug>/`.
+- Por tanto, el patrón de «una sola copia de la skill, compartida en SharePoint» ya está en uso.
+  Lo lógico es replicar esa estructura en una carpeta gemela para Aresa y Cecoagro.
+- Puntos del SKILL.md (leído) que habrá que adaptar para que lo usen personas de producción:
+  - Muchas decisiones están asignadas a Álvaro («DECISIÓN DE ÁLVARO: PENDIENTE…»).
+  - El visto bueno de tirada lo dan «Álvaro o Ángel».
+  - Usa scripts de Python con rutas de Windows y genera imágenes con la herramienta Higgsfield
+    desde la línea de comandos.
+  - Para Aresa y Cecoagro hay que decidir quién aprueba en cada caso y si el equipo de
+    producción tendrá Python y Higgsfield.
 
 ## Datos que faltan (preguntar a Álvaro)
 
-- Confirmar qué carpetas del enlace anterior son de Aresa y cuáles de Cecoagro.
+- Si la biblioteca MARKETING es el punto de partida único o hay que incluir también las bibliotecas
+  ARESA, CECOAGRO y PRODUCCION, y la carpeta `DROPBOX/7. Marketing`.
 - Dónde está la skill de agencia gráfica de mascotas y cómo se instaló.
 - Responsables que supervisan cada manual de identidad.
 - Quién de producción arranca (Roy, José, Silvia…) y qué piezas son prioritarias (¿qué sacos?).
