@@ -79,17 +79,41 @@
   - Lo antiguo pasa a un archivo histórico sin borrarse.
   - Los duplicados se resuelven con aprobación.
 
-## Zonas pendientes (no recorridas por el límite de peticiones o por tamaño)
+## Segunda pasada (31-oct-2026): zonas que estaban pendientes
 
-- MARKETING:
-  - `ARESA/…/ARESA-AGRICOLA`: solo se leyeron 200 de ~1.000 entradas.
-  - `Videos/Video AGEF`.
-  - `AVANTIS/Packaging`.
-  - Subcarpetas de `Digital`.
-  - Subcarpetas anidadas de `TODOCAMPO`.
-- DROPBOX/7. Marketing/LOGOs:
-  - Subcarpetas `Logos (1)`, `logos grupo`, `emilio`, `european`, `NATURCOR` y `ARESA`.
-  - El resto de carpetas de primer nivel de DROPBOX.
-- PRODUCCION: `ETIQUETAS ANTIGUAS` (~129 MB) y la carpeta de urea «lote».
-- CECOAGRO: CERTIFICACIÓN, MANTTO, OBJETIVOS y Subvenciones (no se entró).
-- ARESA: una carpeta de ~31 MB cuyo nombre no se pudo resolver.
+Detalle en `05-pendientes-marketing.md` y `06-pendientes-dropbox-produccion-cecoagro-aresa.md`.
+Esta vez Microsoft no limitó las peticiones.
+
+- **Logotipos vectoriales: se confirma el hueco.**
+  - Solo hay EPS de Aresa (cuatro ubicaciones, incluido el del 50 aniversario) y de O Santo.
+  - Hay editables antiguos de los sacos Fertimax de 2009 en FreeHand.
+  - **Cecoagro, Fertiland, Agroland, Nitroland, Fertimón, Protech, Verdenatur y Naturcor no tienen
+    AI, EPS, SVG ni FreeHand.** Agroland, Nitroland, Fertimón y Verdenatur solo están en PDF; si
+    esos PDF son vectoriales está sin comprobar.
+  - El conector no puede abrir `CECOAGRO_Logo.zip`: hay que abrirlo a mano.
+- **Hallazgo:** `TODOCAMPO/Diseños Superfauna/diseños sacos` contiene **láminas antiguas de abono**
+  (FABRISA, 15-15-15, Nitrato 27, Superfosfato) en formatos editables antiguos (.art y .fh9).
+  Que son de abono se deduce del nombre.
+- **ARESA-AGRICOLA** (MARKETING):
+  - Unas 1.000 entradas, casi todas JPG/PNG en varios tamaños: premios, historia, instalaciones y
+    productos.
+  - No hay arte final.
+  - Quedan unas 186 entradas que el listado no muestra (límite del propio listado).
+- `AVANTIS/Packaging` es material de piensos para mascotas, no de ganadería.
+- **PRODUCCION:**
+  - `ETIQUETAS ANTIGUAS`: etiquetas de abono de Aresa en Word y Excel, logos de Intergal y un
+    subárbol de etiquetas por cliente (sin abrir).
+  - La urea de alimentación animal solo tiene documentos de seguridad y de análisis.
+- **CECOAGRO** (certificación, mantenimiento, objetivos, subvenciones), el resto de **DROPBOX** y la
+  carpeta de 31 MB de **ARESA** (`I+D+i`, cuaderno de campo NIRS) no tienen material gráfico a la
+  vista.
+
+## Lo que sigue sin ver (poco probable que cambie las conclusiones)
+
+- El contenido de `CECOAGRO_Logo.zip`.
+- Las ~186 entradas de ARESA-AGRICOLA que el listado no muestra.
+- Un elemento sin nombre en la raíz de ARESA.
+- El tercer nivel de algunas subcarpetas, detallado en la sección 9 de
+  `06-pendientes-dropbox-produccion-cecoagro-aresa.md`.
+- El subárbol de etiquetas por cliente de `ETIQUETAS ANTIGUAS`.
+- `logos y sacos antiguos/Logos (1)/SOs`.
