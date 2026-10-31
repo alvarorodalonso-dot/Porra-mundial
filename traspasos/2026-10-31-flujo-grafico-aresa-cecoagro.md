@@ -65,6 +65,11 @@ la configuración real de cada equipo.
   fichero que decía lo contrario era erróneo.
 - Álvaro pidió revisar **toda la biblioteca MARKETING** de ese SharePoint. Primer mapa abajo.
 
+## Inventario completo
+
+Ver `traspasos/inventario/00-RESUMEN.md` (31-oct-2026) y los cuatro ficheros de detalle de esa carpeta.
+Cubre MARKETING, DROPBOX (marketing y láminas), ARESA, CECOAGRO y PRODUCCION.
+
 ## Primer mapa (31-oct-2026, leído con el conector de Microsoft 365, solo 1–2 niveles)
 
 Tamaños aproximados según SharePoint. No se ha abierto ningún fichero gráfico, solo se han
