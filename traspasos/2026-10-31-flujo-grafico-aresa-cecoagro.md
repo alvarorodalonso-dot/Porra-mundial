@@ -148,3 +148,18 @@ listado las carpetas.
 2. Comprender la idea completa y proponer a Álvaro la forma técnica (un .md suelto vs. skill
    compartida + `CLAUDE.md` en la carpeta de SharePoint).
 3. Redactar el .md (o paquete) para las personas de producción.
+
+## Siguiente paso acordado (1-nov-2026): logotipos vectoriales
+
+Faltan vectoriales de Cecoagro, Fertiland, Agroland, Nitroland, Fertimón, Protech, Verdenatur y
+Naturcor (ver `inventario/00-RESUMEN.md`). Se usará el mismo método que en mascotas, descrito en
+`COMERCIAL/AvantisPET Graphic resources/_Fuentes originales/Logos/_vectorial/LEEME.md`:
+1. Primero, extraer el logo original de los PDF de imprenta: las láminas de sacos de
+   `DROPBOX/7. Marketing/Diseño Envases/LAMINAS/ARESA/` (2024 y 2025) y `BIG BAGS`. Se reutiliza
+   `extraer_logos_vectoriales.py` de esa carpeta.
+2. Si no hay PDF con el logo, vectorizar desde imagen (`vectorizar_logos.py`) y marcarlo como
+   «reconstrucción».
+3. Nunca redibujar ni generar con IA. Salida en SVG, PDF y PNG de 3.000 px, con un LEEME de
+   procedencia y fiabilidad de cada logo. Validación por el responsable de cada marca.
+4. Abrir a mano `MARKETING/Logos - TODO/CECOAGRO_Logo.zip`, que el conector no puede leer.
+Pendiente de decidir: dónde va la carpeta gemela de Aresa/Cecoagro en SharePoint.
